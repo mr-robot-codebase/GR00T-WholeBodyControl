@@ -7,7 +7,7 @@ class Robot:
         self.ROBOT_TYPE = config["ROBOT_TYPE"]
         self.MOTOR2JOINT = config["MOTOR2JOINT"]
         self.JOINT2MOTOR = config["JOINT2MOTOR"]
-        self.UNITREE_LEGGED_CONST = config["UNITREE_LEGGED_CONST"]
+        self.UNITREE_LEGGED_CONST = config.get("UNITREE_LEGGED_CONST", {})
         self.MOTOR_KP = config["MOTOR_KP"]
         self.MOTOR_KD = config["MOTOR_KD"]
         if "HAND_MOTOR_KP" in config:

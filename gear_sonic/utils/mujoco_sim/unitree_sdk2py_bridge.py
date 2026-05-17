@@ -33,7 +33,9 @@ class UnitreeSdk2Bridge:
         # It is unsafe and would be unflexible if we use a hand-plugged robot model
 
         robot_type = config["ROBOT_TYPE"]
-        if "g1" in robot_type or "h1-2" in robot_type:
+        # TODO: x2 reuses the unitree_hg DDS message format as a transport protocol;
+        # a proper X2Bridge with native X2 DDS types should replace this in future.
+        if "g1" in robot_type or "h1-2" in robot_type or "x2" in robot_type:
             from unitree_sdk2py.idl.default import (
                 unitree_hg_msg_dds__IMUState_ as IMUState_default,
                 unitree_hg_msg_dds__LowCmd_,
@@ -68,7 +70,7 @@ class UnitreeSdk2Bridge:
         self.low_state_puber.Init()
 
         # Only create odo_state for supported robot types
-        if "g1" in robot_type or "h1-2" in robot_type:
+        if "g1" in robot_type or "h1-2" in robot_type or "x2" in robot_type:
             self.odo_state = OdoState_default()
             self.odo_state_puber = ChannelPublisher("rt/odostate", OdoState_)
             self.odo_state_puber.Init()

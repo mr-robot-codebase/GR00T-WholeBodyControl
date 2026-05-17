@@ -15,7 +15,7 @@ import yaml
 
 from gear_sonic.utils.network.network_utils import resolve_interface
 
-WBC_VERSIONS = ["sonic_model12"]
+WBC_VERSIONS = ["sonic_model12", "x2_sonic_model12"]
 
 @dataclass
 class ArgsConfigTemplate:
@@ -315,10 +315,12 @@ class BaseConfig(ArgsConfigTemplate):
 
         if self.wbc_version == "sonic_model12":
             config_path = str(configs_dir / "g1_29dof_sonic_model12.yaml")
+        elif self.wbc_version == "x2_sonic_model12":
+            config_path = str(configs_dir / "x2_31dof_sonic_model12.yaml")
         else:
             raise ValueError(
                 f"Invalid wbc_version: {self.wbc_version}, please use one of: "
-                f"sonic_model12"
+                f"sonic_model12, x2_sonic_model12"
             )
 
         with open(config_path) as file:
