@@ -23,6 +23,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+X2_URDF-v1.3.0/
+checkpoints/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -67,7 +69,6 @@ instance/
 .scrapy
 
 # Sphinx documentation
-data/
 
 # PyBuilder
 .pybuilder/
@@ -206,7 +207,7 @@ xrobotoolkit_sdk.cpython-*-*-*.so
 teleop_vids/
 *.code-workspace
 # Motion/training data (large local datasets, not tracked in git)
-data/
+gear_sonic/data/motion_lib_bones_seed/
 bones_seed_smpl/
 sonic_release/
 # Training output logs
