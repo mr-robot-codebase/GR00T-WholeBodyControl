@@ -248,6 +248,7 @@ class DefaultEnv:
         self.body_joint_index = np.array(self.body_joint_index)
         self.left_hand_index = np.array(self.left_hand_index)
         self.right_hand_index = np.array(self.right_hand_index)
+        self.state_joint_index = self.body_joint_index  # overridden by set_unitree_bridge if remapping needed
 
     def init_renderers(self):
         self.renderers = {}
@@ -261,30 +262,37 @@ class DefaultEnv:
         # PD control: tau = tau_ff + kp * (q_des - q) + kd * (dq_des - dq)
         body_torques = np.zeros(self.num_body_dof)
         if self.unitree_bridge is not None and self.unitree_bridge.low_cmd:
+            remap = self.unitree_bridge.joint_remap
             for i in range(self.unitree_bridge.num_body_motor):
+                j = remap[i] if remap is not None else i  # body_joint_index slot for this DDS slot
+                gain_scale = (
+                    self.unitree_bridge.gain_scale[i]
+                    if self.unitree_bridge.gain_scale is not None
+                    else 1.0
+                )
                 if self.unitree_bridge.use_sensor:
-                    body_torques[i] = (
+                    body_torques[j] = (
                         self.unitree_bridge.low_cmd.motor_cmd[i].tau
-                        + self.unitree_bridge.low_cmd.motor_cmd[i].kp
+                        + self.unitree_bridge.low_cmd.motor_cmd[i].kp * gain_scale
                         * (self.unitree_bridge.low_cmd.motor_cmd[i].q - self.mj_data.sensordata[i])
-                        + self.unitree_bridge.low_cmd.motor_cmd[i].kd
+                        + self.unitree_bridge.low_cmd.motor_cmd[i].kd * gain_scale
                         * (
                             self.unitree_bridge.low_cmd.motor_cmd[i].dq
                             - self.mj_data.sensordata[i + self.unitree_bridge.num_body_motor]
                         )
                     )
                 else:
-                    body_torques[i] = (
+                    body_torques[j] = (
                         self.unitree_bridge.low_cmd.motor_cmd[i].tau
-                        + self.unitree_bridge.low_cmd.motor_cmd[i].kp
+                        + self.unitree_bridge.low_cmd.motor_cmd[i].kp * gain_scale
                         * (
                             self.unitree_bridge.low_cmd.motor_cmd[i].q
-                            - self.mj_data.qpos[self.body_joint_index[i] + self.qpos_offset - 1]
+                            - self.mj_data.qpos[self.body_joint_index[j] + self.qpos_offset - 1]
                         )
-                        + self.unitree_bridge.low_cmd.motor_cmd[i].kd
+                        + self.unitree_bridge.low_cmd.motor_cmd[i].kd * gain_scale
                         * (
                             self.unitree_bridge.low_cmd.motor_cmd[i].dq
-                            - self.mj_data.qvel[self.body_joint_index[i] + self.qvel_offset - 1]
+                            - self.mj_data.qvel[self.body_joint_index[j] + self.qvel_offset - 1]
                         )
                     )
         return body_torques
@@ -335,8 +343,10 @@ class DefaultEnv:
     def compute_body_qpos(self) -> np.ndarray:
         body_qpos = np.zeros(self.num_body_dof)
         if self.unitree_bridge is not None and self.unitree_bridge.low_cmd:
+            remap = self.unitree_bridge.joint_remap
             for i in range(self.unitree_bridge.num_body_motor):
-                body_qpos[i] = self.unitree_bridge.low_cmd.motor_cmd[i].q
+                j = remap[i] if remap is not None else i
+                body_qpos[j] = self.unitree_bridge.low_cmd.motor_cmd[i].q
         return body_qpos
 
     def compute_hand_qpos(self) -> np.ndarray:
@@ -372,10 +382,10 @@ class DefaultEnv:
         )
         obs["secondary_imu_vel"] = pose[7:13]
 
-        obs["body_q"] = self.mj_data.qpos[self.body_joint_index + 7 - 1]
-        obs["body_dq"] = self.mj_data.qvel[self.body_joint_index + 6 - 1]
-        obs["body_ddq"] = self.mj_data.qacc[self.body_joint_index + 6 - 1]
-        obs["body_tau_est"] = self.mj_data.actuator_force[self.body_joint_index - 1]
+        obs["body_q"] = self.mj_data.qpos[self.state_joint_index + 7 - 1]
+        obs["body_dq"] = self.mj_data.qvel[self.state_joint_index + 6 - 1]
+        obs["body_ddq"] = self.mj_data.qacc[self.state_joint_index + 6 - 1]
+        obs["body_tau_est"] = self.mj_data.actuator_force[self.state_joint_index - 1]
         if self.num_hand_dof > 0:
             obs["left_hand_q"] = self.mj_data.qpos[self.left_hand_index + self.qpos_offset - 1]
             obs["left_hand_dq"] = self.mj_data.qvel[self.left_hand_index + self.qvel_offset - 1]
@@ -475,6 +485,10 @@ class DefaultEnv:
 
     def set_unitree_bridge(self, unitree_bridge):
         self.unitree_bridge = unitree_bridge
+        if unitree_bridge is not None and unitree_bridge.joint_remap is not None:
+            self.state_joint_index = self.body_joint_index[unitree_bridge.joint_remap]
+        else:
+            self.state_joint_index = self.body_joint_index
 
     def get_privileged_obs(self):
         return {}

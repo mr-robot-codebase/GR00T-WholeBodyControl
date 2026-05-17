@@ -61,6 +61,37 @@ class UnitreeSdk2Bridge:
         self.num_hand_motor = config.get("NUM_HAND_MOTORS", 0)
         self.use_sensor = config["USE_SENSOR"]
 
+        # joint_remap[g1_dds_slot] = x2_joint_idx — same mapping serves both:
+        #   commands: G1 slot i → apply to X2 joint joint_remap[i]
+        #   state:    read X2 joint joint_remap[i] → publish to G1 slot i
+        # X2 head joints (29, 30) have no G1 slot, so they receive zero torque.
+        # num_body_motor is set to 29 (G1 slot count) so PublishLowState is unchanged.
+        if "x2" in robot_type:
+            self.num_body_motor = 29  # WBC speaks 29-slot G1 protocol
+            self.joint_remap = np.array([
+                 0,  1,  2,  3,  4,  5,  # G1[0-5]  → X2[0-5]  left leg
+                 6,  7,  8,  9, 10, 11,  # G1[6-11] → X2[6-11] right leg
+                12,                       # G1[12]=waist_yaw  → X2[12]
+                14,                       # G1[13]=waist_roll → X2[14]=waist_roll
+                13,                       # G1[14]=waist_pitch → X2[13]=waist_pitch
+                15, 16, 17, 18,           # G1[15-18] → X2[15-18] left shoulder+elbow
+                21,                       # G1[19]=left_wrist_roll  → X2[21]
+                20,                       # G1[20]=left_wrist_pitch → X2[20]
+                19,                       # G1[21]=left_wrist_yaw  → X2[19]
+                22, 23, 24, 25,           # G1[22-25] → X2[22-25] right shoulder+elbow
+                28,                       # G1[26]=right_wrist_roll  → X2[28]
+                27,                       # G1[27]=right_wrist_pitch → X2[27]
+                26,                       # G1[28]=right_wrist_yaw  → X2[26]
+            ])
+            # G1's wrist PD gains cause oscillation on X2's lighter actuators.
+            # Zero out wrist slots so they float passively; adjust once stable.
+            self.gain_scale = np.ones(29)
+            self.gain_scale[19:22] = 0.0  # G1 slots 19-21: left wrist
+            self.gain_scale[26:29] = 0.0  # G1 slots 26-28: right wrist
+        else:
+            self.joint_remap = None  # identity — no remapping needed
+            self.gain_scale = None
+
         self.have_imu_ = False
         self.have_frame_sensor_ = False
 
