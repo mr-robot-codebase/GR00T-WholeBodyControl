@@ -1,5 +1,5 @@
 ROBOT_TYPE: 'x2_31dof'
-ROBOT_SCENE: "X2_URDF-v1.3.0/scene.xml"
+ROBOT_SCENE: "resources/x2/scene.xml"
 
 DOMAIN_ID: 0
 INTERFACE: "lo"

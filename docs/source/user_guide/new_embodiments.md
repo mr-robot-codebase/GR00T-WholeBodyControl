@@ -19,8 +19,8 @@ Here is every file that needs attention, in the order you should work through th
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `gear_sonic/data/assets/robot_description/urdf/<robot>/` | **Add** | URDF + mesh files for Isaac Lab simulation |
-| `gear_sonic/data/assets/robot_description/mjcf/<robot>.xml` | **Add** | MuJoCo XML for motion library forward kinematics |
+| `resources/<robot>/` | **Add** | URDF + mesh files for Isaac Lab simulation |
+| `resources/<robot>/<robot>.xml` | **Add** | MuJoCo XML for motion library forward kinematics |
 | `gear_sonic/envs/manager_env/robots/<robot>.py` | **Add** | Robot config: joints, actuators, mappings, action scales |
 | `gear_sonic/envs/manager_env/robots/__init__.py` | **Modify** | Import your new robot module |
 | `gear_sonic/envs/manager_env/modular_tracking_env_cfg.py` | **Modify** | Add robot to `robot_mapping` dict (~line 998) |
@@ -30,24 +30,21 @@ Here is every file that needs attention, in the order you should work through th
 
 ## Step 1: Robot Model Files
 
-Place your URDF and meshes under `gear_sonic/data/assets/robot_description/`:
+Place your URDF, meshes, and MJCF under `resources/<robot>/`:
 
 ```
-gear_sonic/data/assets/robot_description/
-├── urdf/h2/
-│   ├── h2.urdf
-│   └── meshes/          # STL/OBJ mesh files
-└── mjcf/
-    └── h2.xml           # MuJoCo XML
+resources/h2/
+├── h2.urdf              # URDF with relative mesh paths (e.g. meshes/pelvis.STL)
+├── h2.xml               # MuJoCo XML
+└── meshes/              # STL/OBJ mesh files
 ```
 
 The **URDF** is loaded by Isaac Lab for physics simulation. The **MJCF** is used
 by the motion library to compute forward kinematics on reference motion data.
 Both must represent the same robot with consistent joint names and tree structure.
 
-Make sure your URDF mesh paths are correct (relative paths like `meshes/pelvis.stl`
-work best). If your URDF uses `package://` paths, update them to match the
-directory layout.
+Use relative mesh paths in your URDF (e.g. `meshes/pelvis.STL`). If your URDF
+uses `package://` paths, replace them with relative paths before adding it here.
 
 ## Step 2: Robot Configuration
 
@@ -123,7 +120,7 @@ DAMPING_5020 = 2.0 * DAMPING_RATIO * ARMATURE_5020 * NATURAL_FREQ
 ```python
 H2_CFG = ArticulationCfg(
     spawn=sim_utils.UrdfFileCfg(
-        asset_path="gear_sonic/data/assets/robot_description/urdf/h2/h2.urdf",
+        asset_path="resources/h2/h2.urdf",
         fix_base=False,
         replace_cylinders_with_capsules=True,
         activate_contact_sensors=True,
@@ -440,8 +437,8 @@ The codebase includes full H2 support as a reference:
 | Component | File |
 |-----------|------|
 | Robot config | `gear_sonic/envs/manager_env/robots/h2.py` |
-| URDF + meshes | `gear_sonic/data/assets/robot_description/urdf/h2/` |
-| MJCF | `gear_sonic/data/assets/robot_description/mjcf/h2.xml` |
+| URDF + meshes | `resources/h2/` |
+| MJCF | `resources/h2/h2.xml` |
 | Experiment config | `gear_sonic/config/exp/manager/universal_token/all_modes/sonic_h2.yaml` |
 | Order converter | `gear_sonic/trl/utils/order_converter.py` (`H2Converter`) |
 | Robot mapping | `gear_sonic/envs/manager_env/modular_tracking_env_cfg.py` |
@@ -450,8 +447,8 @@ The codebase includes full H2 support as a reference:
 
 When adding a new robot, verify each of these:
 
-- [ ] URDF + meshes in `gear_sonic/data/assets/robot_description/urdf/<robot>/`
-- [ ] MJCF in `gear_sonic/data/assets/robot_description/mjcf/<robot>.xml`
+- [ ] URDF + meshes in `resources/<robot>/`
+- [ ] MJCF in `resources/<robot>/<robot>.xml`
 - [ ] Robot config in `gear_sonic/envs/manager_env/robots/<robot>.py`:
   - [ ] Joint/body name lists
   - [ ] IsaacLab ↔ MuJoCo index mappings (verified correct!)

@@ -24,6 +24,7 @@ from unitree_sdk2py.core.channel import ChannelFactoryInitialize
 from gear_sonic.utils.mujoco_sim.metric_utils import check_contact, check_height
 from gear_sonic.utils.mujoco_sim.sim_utils import get_subtree_body_names
 from gear_sonic.utils.mujoco_sim.unitree_sdk2py_bridge import ElasticBand, UnitreeSdk2Bridge
+from gear_sonic.utils.mujoco_sim.x2_bridge import X2Bridge
 from gear_sonic.utils.mujoco_sim.robot import Robot
 
 GEAR_SONIC_ROOT = Path(__file__).resolve().parent.parent.parent.parent
@@ -250,6 +251,21 @@ class DefaultEnv:
         self.right_hand_index = np.array(self.right_hand_index)
         self.state_joint_index = self.body_joint_index  # overridden by set_unitree_bridge if remapping needed
 
+        # Build body_actuator_index: maps each body_joint_index slot to the
+        # corresponding MuJoCo actuator index.  Robots whose MJCF defines
+        # actuators in a different order than joints (e.g. X2 puts head before
+        # arms) would silently apply torques to wrong joints if we assumed
+        # actuator_idx == joint_idx - 1.
+        act_jnt_to_act_idx = {}
+        for act_i in range(self.mj_model.nu):
+            if self.mj_model.actuator_trntype[act_i] == mujoco.mjtTrn.mjTRN_JOINT:
+                jnt_idx = int(self.mj_model.actuator_trnid[act_i, 0])
+                act_jnt_to_act_idx[jnt_idx] = act_i
+        self.body_actuator_index = np.array([
+            act_jnt_to_act_idx.get(int(j), int(j) - 1)
+            for j in self.body_joint_index
+        ])
+
     def init_renderers(self):
         self.renderers = {}
         for camera_name, camera_config in self.camera_configs.items():
@@ -426,8 +442,7 @@ class DefaultEnv:
                 self.mj_data.xfrc_applied[self.band_attached_link] = np.zeros(6)
         body_torques = self.compute_body_torques()
         hand_torques = self.compute_hand_torques()
-        # -1: actuator array is 0-based while joint indices from the model are 1-based
-        self.torques[self.body_joint_index - 1] = body_torques
+        self.torques[self.body_actuator_index] = body_torques
         if self.num_hand_dof > 0:
             self.torques[self.left_hand_index - 1] = hand_torques[: self.num_hand_dof]
             self.torques[self.right_hand_index - 1] = hand_torques[self.num_hand_dof :]
@@ -605,11 +620,14 @@ class BaseSimulator:
         pass
 
     def init_unitree_bridge(self):
-        self.unitree_bridge = UnitreeSdk2Bridge(self.config)
-        if self.config["USE_JOYSTICK"]:
-            self.unitree_bridge.SetupJoystick(
-                device_id=self.config["JOYSTICK_DEVICE"], js_type=self.config["JOYSTICK_TYPE"]
-            )
+        if "x2" in self.config.get("ROBOT_TYPE", ""):
+            self.unitree_bridge = X2Bridge(self.config)
+        else:
+            self.unitree_bridge = UnitreeSdk2Bridge(self.config)
+            if self.config["USE_JOYSTICK"]:
+                self.unitree_bridge.SetupJoystick(
+                    device_id=self.config["JOYSTICK_DEVICE"], js_type=self.config["JOYSTICK_TYPE"]
+                )
 
     def start(self):
         """Main simulation loop"""

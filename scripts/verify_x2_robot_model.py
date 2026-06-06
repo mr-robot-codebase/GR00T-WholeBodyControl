@@ -8,8 +8,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from gear_sonic.data.robot_model.robot_model import RobotModel
 from gear_sonic.data.robot_model.supplemental_info.x2.x2_supplemental_info import X2SupplementalInfo
 
-URDF_PATH = "gear_sonic/data/assets/robot_description/urdf/x2/main.urdf"
-ASSET_PATH = "gear_sonic/data/assets"  # parent of robot_description/ for package:// resolution
+URDF_PATH = "resources/x2/main.urdf"
+ASSET_PATH = "resources/x2"
 
 print("=" * 60)
 print("Loading X2 RobotModel with X2SupplementalInfo ...")

@@ -1,7 +1,5 @@
 """Factory function to instantiate a configured G1 RobotModel from URDF."""
 
-import os
-from pathlib import Path
 from typing import Literal
 
 from gear_sonic.data.robot_model.robot_model import RobotModel
@@ -10,6 +8,7 @@ from gear_sonic.data.robot_model.supplemental_info.g1.g1_supplemental_info impor
     G1SupplementalInfo,
     WaistLocation,
 )
+from gear_sonic.utils.robot_paths import get_robot_paths
 
 
 def instantiate_g1_robot_model(
@@ -29,10 +28,10 @@ def instantiate_g1_robot_model(
     Returns:
         RobotModel: Configured G1 robot model
     """
-    model_data_dir = Path(__file__).resolve().parent.parent / "model_data" / "g1"
+    paths = get_robot_paths("g1")
     robot_model_config = {
-        "asset_path": str(model_data_dir),
-        "urdf_path": str(model_data_dir / "g1_29dof_with_hand.urdf"),
+        "asset_path": str(paths["asset_path"]),
+        "urdf_path": str(paths["urdf_with_hand"]),
     }
     assert waist_location in [
         "lower_body",

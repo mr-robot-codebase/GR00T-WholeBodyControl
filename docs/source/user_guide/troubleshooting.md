@@ -40,7 +40,7 @@ git lfs install
 git lfs pull
 ```
 
-Verify: `ls -la gear_sonic/data/assets/robot_description/urdf/g1/main.urdf` should
+Verify: `ls -la resources/g1/main.urdf` should
 be ~60KB+, not ~130 bytes.
 
 ---

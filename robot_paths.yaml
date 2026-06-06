@@ -1,0 +1,24 @@
+# Central registry of robot asset paths.
+# All paths are relative to the repository root.
+# Edit this file to point to different robot assets without touching Python code.
+
+robots:
+  x2:
+    urdf: "resources/x2/main.urdf"
+    asset_path: "resources/x2"
+    scene: "resources/x2/scene.xml"
+    meshes: "resources/x2/meshes"
+    mjcf: "resources/x2/x2_ultra.xml"
+
+  g1:
+    urdf: "resources/g1/main.urdf"
+    asset_path: "resources/g1"
+    urdf_with_hand: "resources/g1/g1_29dof_with_hand.urdf"
+    scene: "resources/g1/scene_43dof.xml"
+    meshes: "resources/g1/meshes"
+    mjcf: "resources/g1/g1_29dof_rev_1_0.xml"
+
+  h2:
+    urdf: "resources/h2/h2.urdf"
+    asset_path: "resources/h2"
+    mjcf: "resources/h2/h2.xml"

@@ -10,6 +10,7 @@ import os
 from typing import TYPE_CHECKING
 
 import easydict
+from gear_sonic.utils.robot_paths import get_robot_paths
 from isaaclab.assets import Articulation
 from isaaclab.managers import CommandTerm, CommandTermCfg
 from isaaclab.markers import VisualizationMarkers, VisualizationMarkersCfg
@@ -191,8 +192,8 @@ class TrackingCommand(CommandTerm):
                     "motion_file": self.cfg.motion_file,
                     "smpl_motion_file": getattr(self.cfg, "smpl_motion_file", None),
                     "asset": {
-                        "assetRoot": "gear_sonic/data/assets/robot_description/mjcf/",
-                        "assetFileName": "g1_29dof_rev_1_0.xml",
+                        "assetRoot": str(get_robot_paths("g1")["mjcf"].parent) + "/",
+                        "assetFileName": get_robot_paths("g1")["mjcf"].name,
                         "urdfFileName": "",
                     },
                     "extend_config": [],

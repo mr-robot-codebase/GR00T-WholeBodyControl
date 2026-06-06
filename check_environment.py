@@ -16,6 +16,14 @@ import shutil
 import subprocess
 import sys
 
+import yaml
+
+
+def _load_robot_paths() -> dict:
+    config = os.path.join(os.path.dirname(__file__), "robot_paths.yaml")
+    with open(config) as f:
+        return yaml.safe_load(f)["robots"]
+
 
 def check(name, passed, msg_pass="", msg_fail=""):
     status = "PASS" if passed else "FAIL"
@@ -46,16 +54,19 @@ def check_python(training=False):
         )
 
 
-def check_git_lfs():
+def check_git_lfs(robot: str = "g1"):
     lfs_installed = shutil.which("git-lfs") is not None
     if not lfs_installed:
         return check("Git LFS", False, msg_fail="not installed (sudo apt install git-lfs)")
 
     # Check if LFS files are pulled (sample an actual LFS-tracked mesh file)
-    mesh_path = "gear_sonic/data/assets/robot_description/urdf/g1/meshes"
+    try:
+        mesh_path = _load_robot_paths()[robot]["meshes"]
+    except Exception:
+        mesh_path = f"resources/{robot}/meshes"
     stl_files = [os.path.join(mesh_path, f) for f in os.listdir(mesh_path) if f.endswith(".STL")] if os.path.isdir(mesh_path) else []
-    sample_file = stl_files[0] if stl_files else "decoupled_wbc/sim2mujoco/resources/robots/g1/policy/GR00T-WholeBodyControl-Balance.onnx"
-    if os.path.exists(sample_file):
+    sample_file = stl_files[0] if stl_files else None
+    if sample_file and os.path.exists(sample_file):
         size = os.path.getsize(sample_file)
         if size < 1000:
             return check(
@@ -186,9 +197,15 @@ def main():
     elif "--deploy" in sys.argv:
         mode = "deploy"
 
+    robot = "g1"
+    for arg in sys.argv:
+        if arg.startswith("--robot="):
+            robot = arg.split("=", 1)[1]
+
     print(f"GR00T-WholeBodyControl Environment Check")
     print(f"Platform: {platform.system()} {platform.machine()}")
     print(f"Python:   {sys.executable}")
+    print(f"Robot:    {robot}")
     print()
 
     all_pass = True
@@ -196,7 +213,7 @@ def main():
     # Basic checks (always run)
     print("Basic:")
     all_pass &= check_python(training=(mode in ("all", "training")))
-    all_pass &= check_git_lfs()
+    all_pass &= check_git_lfs(robot=robot)
     all_pass &= check_cuda()
     all_pass &= check_torch()
     all_pass &= check_disk_space()

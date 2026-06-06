@@ -6,7 +6,7 @@ motion:
     motion_file: ${robot.motion.motion_file}
     smpl_motion_file:
     asset:
-      assetRoot: "gear_sonic/data/assets/robot_description/mjcf/"
+      assetRoot: "resources/g1/"
       assetFileName: "g1_29dof_rev_1_0.xml"
       urdfFileName: ""
     extend_config: []

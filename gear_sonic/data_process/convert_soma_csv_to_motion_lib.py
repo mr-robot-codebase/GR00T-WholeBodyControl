@@ -49,6 +49,8 @@ import joblib
 import numpy as np
 from scipy.spatial import transform
 
+from gear_sonic.utils.robot_paths import get_robot_paths
+
 # IsaacLab ↔ MuJoCo joint reordering (29 DOFs for G1).
 # MJ_TO_IL[mj] = il: for MuJoCo DOF index mj, gives the IsaacLab index il.
 # Source: external_dependencies/SONIC_Web/demo_python.py
@@ -337,8 +339,8 @@ def init_humanoid_fk():
     motion_cfg = omegaconf.OmegaConf.create(
         {
             "asset": {
-                "assetRoot": "gear_sonic/data/assets/robot_description/mjcf/",
-                "assetFileName": "g1_29dof_rev_1_0.xml",
+                "assetRoot": str(get_robot_paths("g1")["mjcf"].parent) + "/",
+                "assetFileName": get_robot_paths("g1")["mjcf"].name,
                 "urdfFileName": "",
             },
             "extend_config": [],
