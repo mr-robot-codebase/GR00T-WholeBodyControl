@@ -29,6 +29,12 @@ from gear_sonic.utils.mujoco_sim.robot import Robot
 
 GEAR_SONIC_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
+# DDS bridge classes, selected per-robot via the BRIDGE_CLASS field in the WBC config.
+BRIDGE_REGISTRY = {
+    "UnitreeSdk2Bridge": UnitreeSdk2Bridge,
+    "X2Bridge": X2Bridge,
+}
+
 
 class DefaultEnv:
     """Base environment class that handles simulation environment setup and step"""
@@ -185,17 +191,13 @@ class DefaultEnv:
         # Enable the elastic band
         if self.config["ENABLE_ELASTIC_BAND"] and self.use_floating_root_link:
             self.elastic_band = ElasticBand()
-            if "g1" in self.config["ROBOT_TYPE"]:
-                if self.config["enable_waist"]:
-                    self.band_attached_link = self.mj_model.body("pelvis").id
-                else:
-                    self.band_attached_link = self.mj_model.body("torso_link").id
-            elif "h1" in self.config["ROBOT_TYPE"]:
-                self.band_attached_link = self.mj_model.body("torso_link").id
-            elif "x2" in self.config["ROBOT_TYPE"]:
-                self.band_attached_link = self.mj_model.body("pelvis").id
+            if not self.config.get("enable_waist", True):
+                band_link_name = self.config.get(
+                    "BAND_ATTACHED_LINK_NO_WAIST", self.config["BAND_ATTACHED_LINK"]
+                )
             else:
-                self.band_attached_link = self.mj_model.body("base_link").id
+                band_link_name = self.config["BAND_ATTACHED_LINK"]
+            self.band_attached_link = self.mj_model.body(band_link_name).id
 
             if self.onscreen:
                 self.viewer = mujoco.viewer.launch_passive(
@@ -286,11 +288,17 @@ class DefaultEnv:
                     if self.unitree_bridge.gain_scale is not None
                     else 1.0
                 )
+                joint_offset = (
+                    self.unitree_bridge.joint_offset[i]
+                    if self.unitree_bridge.joint_offset is not None
+                    else 0.0
+                )
+                q_des = self.unitree_bridge.low_cmd.motor_cmd[i].q + joint_offset
                 if self.unitree_bridge.use_sensor:
                     body_torques[j] = (
                         self.unitree_bridge.low_cmd.motor_cmd[i].tau
                         + self.unitree_bridge.low_cmd.motor_cmd[i].kp * gain_scale
-                        * (self.unitree_bridge.low_cmd.motor_cmd[i].q - self.mj_data.sensordata[i])
+                        * (q_des - self.mj_data.sensordata[i])
                         + self.unitree_bridge.low_cmd.motor_cmd[i].kd * gain_scale
                         * (
                             self.unitree_bridge.low_cmd.motor_cmd[i].dq
@@ -302,7 +310,7 @@ class DefaultEnv:
                         self.unitree_bridge.low_cmd.motor_cmd[i].tau
                         + self.unitree_bridge.low_cmd.motor_cmd[i].kp * gain_scale
                         * (
-                            self.unitree_bridge.low_cmd.motor_cmd[i].q
+                            q_des
                             - self.mj_data.qpos[self.body_joint_index[j] + self.qpos_offset - 1]
                         )
                         + self.unitree_bridge.low_cmd.motor_cmd[i].kd * gain_scale
@@ -362,7 +370,12 @@ class DefaultEnv:
             remap = self.unitree_bridge.joint_remap
             for i in range(self.unitree_bridge.num_body_motor):
                 j = remap[i] if remap is not None else i
-                body_qpos[j] = self.unitree_bridge.low_cmd.motor_cmd[i].q
+                joint_offset = (
+                    self.unitree_bridge.joint_offset[i]
+                    if self.unitree_bridge.joint_offset is not None
+                    else 0.0
+                )
+                body_qpos[j] = self.unitree_bridge.low_cmd.motor_cmd[i].q + joint_offset
         return body_qpos
 
     def compute_hand_qpos(self) -> np.ndarray:
@@ -620,14 +633,12 @@ class BaseSimulator:
         pass
 
     def init_unitree_bridge(self):
-        if "x2" in self.config.get("ROBOT_TYPE", ""):
-            self.unitree_bridge = X2Bridge(self.config)
-        else:
-            self.unitree_bridge = UnitreeSdk2Bridge(self.config)
-            if self.config["USE_JOYSTICK"]:
-                self.unitree_bridge.SetupJoystick(
-                    device_id=self.config["JOYSTICK_DEVICE"], js_type=self.config["JOYSTICK_TYPE"]
-                )
+        bridge_cls = BRIDGE_REGISTRY[self.config["BRIDGE_CLASS"]]
+        self.unitree_bridge = bridge_cls(self.config)
+        if self.config["USE_JOYSTICK"] and hasattr(self.unitree_bridge, "SetupJoystick"):
+            self.unitree_bridge.SetupJoystick(
+                device_id=self.config["JOYSTICK_DEVICE"], js_type=self.config["JOYSTICK_TYPE"]
+            )
 
     def start(self):
         """Main simulation loop"""

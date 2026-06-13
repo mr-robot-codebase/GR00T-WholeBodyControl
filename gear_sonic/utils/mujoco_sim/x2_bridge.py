@@ -48,6 +48,20 @@ class X2Bridge:
     DDS topics so the G1 WBC policy can drive X2 without modification.
     """
 
+    # Per-G1-slot zero-pose offset (radians), added to the policy's desired q
+    # before sending it to X2 actuators and subtracted from X2's measured q
+    # before reporting state to the policy.  X2's mechanical zero for the
+    # shoulder-roll and elbow joints corresponds to a different arm pose than
+    # G1's mechanical zero, so without this offset the same SONIC motion
+    # makes X2's arms point in different directions than G1's.  Values found
+    # by matching X2's upper-arm/forearm directions (in the torso frame) to
+    # G1's at q=0.
+    JOINT_OFFSET = np.zeros(29)
+    JOINT_OFFSET[16] = -0.061    # left_shoulder_roll
+    JOINT_OFFSET[18] = -np.pi / 2  # left_elbow
+    JOINT_OFFSET[23] = 0.061     # right_shoulder_roll
+    JOINT_OFFSET[25] = -np.pi / 2  # right_elbow
+
     # G1[slot] → X2[joint_index]
     JOINT_REMAP = np.array([
          0,  1,  2,  3,  4,  5,   # G1[0-5]  → X2[0-5]  left leg
@@ -71,6 +85,7 @@ class X2Bridge:
         self.use_sensor = config["USE_SENSOR"]
 
         self.joint_remap = self.JOINT_REMAP.copy()
+        self.joint_offset = self.JOINT_OFFSET.copy()
 
         # G1 wrist PD gains cause oscillation on X2's lighter actuators.
         # Zero wrist slots so they float passively until gains are tuned.
@@ -163,9 +178,11 @@ class X2Bridge:
         if self.use_sensor:
             raise NotImplementedError("USE_SENSOR not implemented for X2.")
 
-        # Joint state — from MuJoCo motor encoders (ground truth)
+        # Joint state — from MuJoCo motor encoders (ground truth).
+        # Subtract the zero-pose offset so the policy sees X2's state in
+        # G1's joint-angle convention.
         for i in range(self.num_body_motor):
-            self.low_state.motor_state[i].q = obs["body_q"][i]
+            self.low_state.motor_state[i].q = obs["body_q"][i] - self.joint_offset[i]
             self.low_state.motor_state[i].dq = obs["body_dq"][i]
             self.low_state.motor_state[i].ddq = obs["body_ddq"][i]
             self.low_state.motor_state[i].tau_est = obs["body_tau_est"][i]

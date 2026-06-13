@@ -61,6 +61,7 @@ class UnitreeSdk2Bridge:
 
         self.joint_remap = None  # identity — no remapping needed
         self.gain_scale = None
+        self.joint_offset = None  # no zero-pose correction needed
 
         self.have_imu_ = False
         self.have_frame_sensor_ = False

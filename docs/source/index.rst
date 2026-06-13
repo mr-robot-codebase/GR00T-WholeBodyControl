@@ -94,6 +94,7 @@ Documentation
    tutorials/data_collection
    tutorials/vla_workflow
    tutorials/vla_inference
+   tutorials/adding_a_new_robot
 
 .. toctree::
    :maxdepth: 2

@@ -1,6 +1,9 @@
 ROBOT_TYPE: 'x2_31dof'
 ROBOT_SCENE: "resources/x2/scene.xml"
 
+BRIDGE_CLASS: "X2Bridge" # DDS bridge class used to drive this robot in sim
+BAND_ATTACHED_LINK: "pelvis" # Body the elastic band attaches to
+
 DOMAIN_ID: 0
 INTERFACE: "lo"
 SIMULATOR: "mujoco"
